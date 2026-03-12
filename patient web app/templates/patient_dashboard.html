@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Patient Dashboard{% endblock %}
+{% block page_title %}<i class="fa-solid fa-calendar-check me-2 text-primary"></i>Patient Portal{% endblock %}
+{% block content %}
+
+<div class="row g-4">
+
+  <!-- Booking Form -->
+  <div class="col-lg-6">
+    <div class="card-dash h-100">
+      <div class="card-dash-header">
+        <i class="fa-solid fa-pen-to-square me-2"></i>Book Appointment
+      </div>
+      <div class="card-dash-body">
+        <form method="POST" action="{{ url_for('book_appointment') }}">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-600">Full Name</label>
+              <input type="text" name="name" class="form-control" value="{{ session.name }}" required/>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-600">Age</label>
+              <input type="number" name="age" class="form-control" placeholder="Age" min="1" max="120" required/>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-600">Phone Number</label>
+              <input type="tel" name="phone" class="form-control" placeholder="10-digit number" required/>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-600">Appointment Time</label>
+              <input type="time" name="appt_time" class="form-control" required/>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-600">Select Doctor</label>
+              <select name="doctor_id" class="form-select" required>
+                {% for doc in doctors %}
+                <option value="{{ doc.id }}" {% if not doc.available %}disabled{% endif %}>
+                  {{ doc.name }} — {{ doc.specialty }}
+                  {% if not doc.available %}(Unavailable){% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-600">
+                Symptoms
+                <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="voiceBtn">
+                  <i class="fa-solid fa-microphone"></i> Voice Input
+                </button>
+              </label>
+              <textarea name="symptoms" id="symptomsField" class="form-control" rows="3"
+                        placeholder="Describe your symptoms here..." required></textarea>
+              <div id="voiceStatus" class="form-text text-primary d-none">
+                <i class="fa-solid fa-circle-notch fa-spin me-1"></i>Listening...
+              </div>
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary btn-lg w-100 fw-600">
+                <i class="fa-solid fa-calendar-plus me-2"></i>Book Appointment
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div class="col-lg-6">
+
+    <!-- My bookings -->
+    <div class="card-dash mb-4">
+      <div class="card-dash-header">
+        <i class="fa-solid fa-list-ol me-2"></i>My Queue Status
+        <span class="ms-auto refresh-dot"></span>
+      </div>
+      <div class="card-dash-body">
+        {% if my_bookings %}
+          {% for b in my_bookings %}
+          <div class="queue-ticket mb-3">
+            <div class="ticket-token">#{{ b.token }}</div>
+            <div class="ticket-info">
+              <div class="ticket-name">{{ b.name }}</div>
+              <div class="ticket-detail">
+                <i class="fa-solid fa-user-doctor me-1"></i>{{ b.doctor_name }} · {{ b.doctor_room }}
+              </div>
+              <div class="ticket-detail">
+                {% if b.status == 'active' %}
+                  <span class="badge-status active">NOW SERVING</span>
+                {% elif b.status == 'completed' %}
+                  <span class="badge-status completed">COMPLETED</span>
+                {% else %}
+                  Est. wait: ~{{ b.estimated_wait }} min
+                  <span class="badge-status waiting ms-1">WAITING</span>
+                {% endif %}
+              </div>
+              <div class="ticket-detail mt-1">
+                <span class="priority-badge priority-{{ b.priority|lower }}">
+                  <i class="fa-solid fa-{% if b.priority=='HIGH' %}triangle-exclamation{% else %}circle-check{% endif %} me-1"></i>
+                  {{ b.priority }} PRIORITY
+                </span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <i class="fa-solid fa-calendar-xmark fa-2x text-muted mb-2"></i>
+            <p class="text-muted">No appointments booked yet.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Live Queue -->
+    <div class="card-dash">
+      <div class="card-dash-header">
+        <i class="fa-solid fa-eye me-2"></i>Live Queue Overview
+      </div>
+      <div class="card-dash-body p-0" id="liveQueueList">
+        <div class="text-center py-3 text-muted">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+// Voice Input
+const voiceBtn      = document.getElementById('voiceBtn');
+const symptomsField = document.getElementById('symptomsField');
+const voiceStatus   = document.getElementById('voiceStatus');
+
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SR();
+  recognition.lang = 'en-IN';
+
+  voiceBtn.addEventListener('click', () => {
+    recognition.start();
+    voiceStatus.classList.remove('d-none');
+    voiceBtn.classList.add('btn-primary');
+    voiceBtn.classList.remove('btn-outline-primary');
+  });
+  recognition.onresult = (e) => {
+    symptomsField.value = e.results[0][0].transcript;
+    voiceStatus.classList.add('d-none');
+    voiceBtn.classList.remove('btn-primary');
+    voiceBtn.classList.add('btn-outline-primary');
+  };
+  recognition.onerror = () => voiceStatus.classList.add('d-none');
+} else {
+  voiceBtn.disabled = true;
+  voiceBtn.title = 'Not supported in this browser';
+}
+
+// Auto-refresh queue every 3 seconds
+function refreshQueue() {
+  fetch('/api/queue').then(r => r.json()).then(data => {
+    const container = document.getElementById('liveQueueList');
+    const visible   = data.filter(p => p.status !== 'completed').slice(0, 8);
+    if (!visible.length) {
+      container.innerHTML = '<div class="text-center py-3 text-muted">Queue is empty.</div>';
+      return;
+    }
+    let html = `<table class="table table-hover mb-0 small">
+      <thead><tr><th>Token</th><th>Name</th><th>Doctor</th><th>Status</th><th>Wait</th></tr></thead><tbody>`;
+    visible.forEach(p => {
+      const rowCls = p.status === 'active' ? 'table-primary' : '';
+      const priCls = p.priority === 'HIGH' ? 'text-danger fw-bold' : '';
+      const icon   = p.priority === 'HIGH' ? '<i class="fa fa-triangle-exclamation text-danger ms-1"></i>' : '';
+      const wait   = p.status === 'active' ? '<i class="fa fa-arrow-right text-success"></i>' : p.estimated_wait + ' min';
+      html += `<tr class="${rowCls}">
+        <td><span class="fw-bold">#${p.token}</span></td>
+        <td class="${priCls}">${p.name}${icon}</td>
+        <td>${p.doctor_name}</td>
+        <td><span class="badge-status ${p.status}">${p.status.toUpperCase()}</span></td>
+        <td>${wait}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  });
+}
+
+refreshQueue();
+setInterval(refreshQueue, 3000);
+</script>
+{% endblock %}

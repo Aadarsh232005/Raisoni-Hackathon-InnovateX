@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Register — SmartHospital QMS{% endblock %}
+{% block auth_content %}
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <i class="fa-solid fa-user-plus"></i>
+      </div>
+      <h2 class="auth-title">Patient Registration</h2>
+      <p class="auth-sub">Create your hospital account</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('register') }}" class="auth-form">
+      <div class="mb-3">
+        <label class="form-label fw-600">Full Name</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa-solid fa-id-card text-primary"></i></span>
+          <input type="text" name="name" class="form-control" placeholder="Your full name" required/>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-600">Phone Number</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa-solid fa-phone text-primary"></i></span>
+          <input type="tel" name="phone" class="form-control" placeholder="10-digit mobile number" required/>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-600">Username</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa-solid fa-user text-primary"></i></span>
+          <input type="text" name="username" class="form-control" placeholder="Choose a username" required/>
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-600">Password</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa-solid fa-lock text-primary"></i></span>
+          <input type="password" name="password" class="form-control" placeholder="Create password" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 btn-lg fw-600">
+        <i class="fa-solid fa-user-check me-2"></i>Register
+      </button>
+    </form>
+
+    <p class="text-center mt-3 text-muted small">
+      Already registered? <a href="{{ url_for('login') }}" class="text-primary fw-600">Login here</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}<i class="fa-solid fa-gauge-high me-2 text-primary"></i>Admin Dashboard{% endblock %}
+{% block content %}
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-blue">
+      <div class="stat-icon"><i class="fa-solid fa-hospital-user"></i></div>
+      <div class="stat-val" id="kpiTotal">{{ stats.total_today }}</div>
+      <div class="stat-label">Total Patients Today</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-orange">
+      <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+      <div class="stat-val" id="kpiWaiting">{{ stats.waiting }}</div>
+      <div class="stat-label">Currently Waiting</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-red">
+      <div class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="stat-val" id="kpiHigh">{{ stats.high_priority }}</div>
+      <div class="stat-label">High Priority</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card stat-green">
+      <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="stat-val" id="kpiDone">{{ stats.completed }}</div>
+      <div class="stat-label">Completed Today</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- IoT Sensors -->
+  <div class="col-lg-5">
+    <div class="card-dash h-100">
+      <div class="card-dash-header">
+        <i class="fa-solid fa-microchip me-2 text-success"></i>ESP32 IoT Sensors
+        <span class="ms-auto refresh-dot"></span>
+      </div>
+      <div class="card-dash-body">
+        <div class="iot-grid">
+          <div class="iot-sensor">
+            <div class="iot-icon bg-orange-soft"><i class="fa-solid fa-temperature-half text-warning"></i></div>
+            <div class="iot-val" id="iotTemp">–</div>
+            <div class="iot-label">Room Temp (°C)</div>
+          </div>
+          <div class="iot-sensor">
+            <div class="iot-icon bg-blue-soft"><i class="fa-solid fa-droplet text-primary"></i></div>
+            <div class="iot-val" id="iotHumidity">–</div>
+            <div class="iot-label">Humidity (%)</div>
+          </div>
+          <div class="iot-sensor">
+            <div class="iot-icon bg-green-soft"><i class="fa-solid fa-person-walking text-success"></i></div>
+            <div class="iot-val" id="iotMotion">–</div>
+            <div class="iot-label">Motion (PIR)</div>
+          </div>
+          <div class="iot-sensor">
+            <div class="iot-icon bg-purple-soft"><i class="fa-solid fa-people-group text-purple"></i></div>
+            <div class="iot-val" id="iotCrowd">–</div>
+            <div class="iot-label">Crowd Count</div>
+          </div>
+        </div>
+        <div class="iot-footer" id="iotTimestamp">
+          <i class="fa fa-satellite-dish me-1 text-success"></i>Last update: –
+        </div>
+        <div class="mt-3">
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>Waiting Room Capacity</span>
+            <span id="crowdPct">–</span>
+          </div>
+          <div class="progress" style="height:10px">
+            <div class="progress-bar bg-primary" id="crowdBar" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Doctor Availability -->
+  <div class="col-lg-7">
+    <div class="card-dash h-100">
+      <div class="card-dash-header">
+        <i class="fa-solid fa-user-doctor me-2"></i>Doctor Availability
+      </div>
+      <div class="card-dash-body p-0">
+        <table class="table mb-0 align-middle">
+          <thead class="table-head">
+            <tr><th>Doctor</th><th>Specialty</th><th>Room</th><th>Status</th><th>Queue</th></tr>
+          </thead>
+          <tbody>
+            {% for doc in stats.doctors %}
+            <tr>
+              <td class="fw-600">{{ doc.name }}</td>
+              <td><span class="text-muted small">{{ doc.specialty }}</span></td>
+              <td>{{ doc.room }}</td>
+              <td>
+                {% if doc.available %}
+                  <span class="badge-status active">AVAILABLE</span>
+                {% else %}
+                  <span class="badge-status completed">AWAY</span>
+                {% endif %}
+              </td>
+              <td><span class="fw-bold" id="docQ{{ doc.id }}">–</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Live Queue Table -->
+  <div class="col-lg-8">
+    <div class="card-dash">
+      <div class="card-dash-header">
+        <i class="fa-solid fa-list-ol me-2"></i>Live Patient Queue
+        <a href="/api/export" target="_blank" class="btn btn-sm btn-outline-primary ms-auto">
+          <i class="fa fa-download me-1"></i>Export JSON
+        </a>
+      </div>
+      <div class="card-dash-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle small">
+            <thead class="table-head">
+              <tr>
+                <th>#Token</th><th>Name</th><th>Age</th><th>Doctor</th>
+                <th>Symptoms</th><th>Priority</th><th>Status</th><th>Wait</th>
+              </tr>
+            </thead>
+            <tbody id="adminQueueBody">
+              <tr><td colspan="8" class="text-center py-3">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMS Log -->
+  <div class="col-lg-4">
+    <div class="card-dash h-100">
+      <div class="card-dash-header">
+        <i class="fa-solid fa-message me-2"></i>SMS Notifications
+      </div>
+      <div class="card-dash-body p-0" style="max-height:380px;overflow-y:auto" id="smsLogBody">
+        {% if sms_log %}
+          {% for s in sms_log|reverse %}
+          <div class="sms-entry">
+            <div class="sms-phone"><i class="fa fa-mobile me-1"></i>{{ s.phone }}</div>
+            <div class="sms-msg">{{ s.message }}</div>
+            <div class="sms-meta"><i class="fa fa-clock me-1"></i>{{ s.time }}
+              <span class="badge bg-success ms-1 small">{{ s.status }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center text-muted py-4">No SMS sent yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const MAX_CROWD = 30;
+
+function refreshAdmin() {
+  fetch('/api/stats').then(r => r.json()).then(s => {
+    document.getElementById('kpiTotal').textContent   = s.total_today;
+    document.getElementById('kpiWaiting').textContent = s.waiting;
+    document.getElementById('kpiHigh').textContent    = s.high_priority;
+    document.getElementById('kpiDone').textContent    = s.completed;
+
+    const iot = s.iot;
+    if (iot && iot.temperature !== undefined) {
+      document.getElementById('iotTemp').textContent     = iot.temperature.toFixed(1);
+      document.getElementById('iotHumidity').textContent = iot.humidity.toFixed(0);
+      document.getElementById('iotMotion').textContent   = iot.motion_detected ? '✅ YES' : '❌ NO';
+      document.getElementById('iotCrowd').textContent    = iot.waiting_room_count;
+      document.getElementById('iotTimestamp').innerHTML  =
+        `<i class="fa fa-satellite-dish me-1 text-success"></i>Last update: ${iot.timestamp}`;
+      const pct = Math.min(100, Math.round((iot.waiting_room_count / MAX_CROWD) * 100));
+      document.getElementById('crowdBar').style.width = pct + '%';
+      document.getElementById('crowdBar').className   =
+        'progress-bar ' + (pct > 80 ? 'bg-danger' : pct > 50 ? 'bg-warning' : 'bg-primary');
+      document.getElementById('crowdPct').textContent = pct + '%';
+    }
+  });
+
+  fetch('/api/queue').then(r => r.json()).then(data => {
+    const docCounts = {};
+    data.forEach(p => {
+      if (p.status !== 'completed')
+        docCounts[p.doctor_id] = (docCounts[p.doctor_id] || 0) + 1;
+    });
+    Object.keys(docCounts).forEach(id => {
+      const el = document.getElementById('docQ' + id);
+      if (el) el.textContent = docCounts[id] + ' patients';
+    });
+
+    const tbody = document.getElementById('adminQueueBody');
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">No patients yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(p => {
+      const rowCls  = p.status === 'active' ? 'table-primary' : p.status === 'completed' ? 'table-light text-muted' : '';
+      const priCls  = p.priority === 'HIGH' ? 'danger' : 'secondary';
+      const waitTxt = p.status === 'active'    ? '<span class="text-success fw-bold">SERVING</span>'
+                    : p.status === 'completed' ? '✓ Done'
+                    : `${p.estimated_wait} min`;
+      return `<tr class="${rowCls}">
+        <td><span class="fw-bold">#${p.token}</span></td>
+        <td>${p.name}</td>
+        <td>${p.age}</td>
+        <td><span class="small">${p.doctor_name}</span></td>
+        <td><span class="d-inline-block text-truncate" style="max-width:100px" title="${p.symptoms}">${p.symptoms}</span></td>
+        <td><span class="badge bg-${priCls}">${p.priority}</span></td>
+        <td><span class="badge-status ${p.status}">${p.status.toUpperCase()}</span></td>
+        <td>${waitTxt}</td>
+      </tr>`;
+    }).join('');
+  });
+
+  fetch('/api/sms-log').then(r => r.json()).then(logs => {
+    const el = document.getElementById('smsLogBody');
+    if (!logs.length) {
+      el.innerHTML = '<div class="text-center text-muted py-4">No SMS sent yet.</div>';
+      return;
+    }
+    el.innerHTML = [...logs].reverse().map(s => `
+      <div class="sms-entry">
+        <div class="sms-phone"><i class="fa fa-mobile me-1"></i>${s.phone}</div>
+        <div class="sms-msg">${s.message}</div>
+        <div class="sms-meta"><i class="fa fa-clock me-1"></i>${s.time}
+          <span class="badge bg-success ms-1 small">${s.status}</span>
+        </div>
+      </div>`).join('');
+  });
+}
+
+refreshAdmin();
+setInterval(refreshAdmin, 3000);
+</script>
+{% endblock %}

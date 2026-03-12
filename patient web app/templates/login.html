@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Login — SmartHospital QMS{% endblock %}
+{% block auth_content %}
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <i class="fa-solid fa-hospital-user"></i>
+      </div>
+      <h2 class="auth-title">SmartHospital QMS</h2>
+      <p class="auth-sub">AI + IoT Queue Management System</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+      <div class="mb-3">
+        <label class="form-label fw-600">Username</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa-solid fa-user text-primary"></i></span>
+          <input type="text" name="username" class="form-control" placeholder="Enter username" required autofocus/>
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-600">Password</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="fa-solid fa-lock text-primary"></i></span>
+          <input type="password" name="password" class="form-control" placeholder="Enter password" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 btn-lg fw-600">
+        <i class="fa-solid fa-right-to-bracket me-2"></i>Sign In
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>Demo Credentials</span></div>
+    <div class="demo-creds">
+      <div class="demo-row" onclick="fillCreds('admin','admin123')">
+        <span class="badge bg-danger">ADMIN</span>
+        <code>admin / admin123</code>
+      </div>
+      <div class="demo-row" onclick="fillCreds('doctor1','doctor123')">
+        <span class="badge bg-success">DOCTOR</span>
+        <code>doctor1 / doctor123</code>
+      </div>
+      <div class="demo-row" onclick="fillCreds('patient','pass123')">
+        <span class="badge bg-primary">PATIENT</span>
+        <code>patient / pass123</code>
+      </div>
+    </div>
+
+    <p class="text-center mt-3 text-muted small">
+      New patient? <a href="{{ url_for('register') }}" class="text-primary fw-600">Register here</a>
+    </p>
+  </div>
+</div>
+
+<script>
+function fillCreds(u, p) {
+  document.querySelector('[name=username]').value = u;
+  document.querySelector('[name=password]').value = p;
+}
+</script>
+{% endblock %}

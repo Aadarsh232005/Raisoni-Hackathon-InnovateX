@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Queue Display — SmartHospital</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      background: #020b18;
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+    }
+    .display-header {
+      background: linear-gradient(135deg, #0057b7, #003d82);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid #00c2ff;
+    }
+    .hospital-name { font-size: 1.5rem; font-weight: 800; }
+    .hospital-sub  { font-size: 0.8rem; opacity: 0.8; }
+    .live-dot { width:12px; height:12px; background:#00ff88; border-radius:50%; animation:pulse 1.5s infinite; display:inline-block; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }
+
+    .display-body { padding: 24px 32px; }
+
+    /* NOW SERVING */
+    .now-serving-card {
+      background: linear-gradient(135deg, #0057b7, #0096ff);
+      border-radius: 20px; padding: 36px 40px; text-align: center;
+      margin-bottom: 24px; box-shadow: 0 8px 40px rgba(0,150,255,.4);
+    }
+    .ns-label  { font-size:.9rem; letter-spacing:.3em; text-transform:uppercase; opacity:.85; margin-bottom:8px; }
+    .ns-token  { font-size:5rem; font-weight:800; font-family:'DM Mono',monospace; }
+    .ns-name   { font-size:1.6rem; font-weight:600; margin-top:8px; }
+    .ns-doctor { font-size:1rem; opacity:.85; margin-top:4px; }
+    .ns-room   { display:inline-block; background:rgba(255,255,255,.2); padding:4px 16px;
+                 border-radius:20px; font-size:.9rem; margin-top:12px; }
+
+    /* NEXT */
+    .next-card { background:#0d1f35; border:2px solid #1a3a5c; border-radius:16px; padding:24px 28px; margin-bottom:24px; }
+    .next-label { font-size:.75rem; letter-spacing:.25em; color:#00c2ff; text-transform:uppercase; margin-bottom:10px; }
+    .next-token { font-size:2.5rem; font-weight:800; font-family:'DM Mono',monospace; }
+    .next-name  { font-size:1.2rem; color:#cdd; }
+    .next-doctor{ font-size:.9rem; color:#6fa3c8; margin-top:4px; }
+
+    /* Queue rows */
+    .queue-table-card { background:#0d1f35; border:1px solid #1a3a5c; border-radius:16px; overflow:hidden; }
+    .queue-table-header {
+      background:#0a1929; padding:14px 24px;
+      font-size:.75rem; letter-spacing:.2em; color:#5a8aaa; text-transform:uppercase;
+      border-bottom:1px solid #1a3a5c;
+    }
+    .queue-row {
+      display:grid; grid-template-columns:80px 1fr 1fr 120px 100px;
+      align-items:center; padding:14px 24px; border-bottom:1px solid #102030;
+    }
+    .q-token  { font-family:'DM Mono',monospace; font-size:1.2rem; font-weight:700; color:#00c2ff; }
+    .q-name   { font-weight:600; }
+    .q-doctor { color:#6fa3c8; font-size:.9rem; }
+    .q-wait   { color:#adc; font-size:.9rem; }
+    .badge-high { background:rgba(255,77,77,.2); color:#ff4d4d; border:1px solid #ff4d4d;
+                  border-radius:20px; padding:2px 12px; font-size:.75rem; font-weight:700; }
+    .badge-norm { background:rgba(100,180,100,.15); color:#7dc; border:1px solid #3a7;
+                  border-radius:20px; padding:2px 12px; font-size:.75rem; }
+
+    /* Stats */
+    .stats-row { display:flex; gap:16px; margin-top:24px; }
+    .stat-box  { flex:1; background:#0d1f35; border:1px solid #1a3a5c; border-radius:14px; padding:20px; text-align:center; }
+    .stat-box .val { font-size:2.4rem; font-weight:800; font-family:'DM Mono',monospace; }
+    .stat-box .lbl { font-size:.75rem; letter-spacing:.15em; color:#6fa3c8; text-transform:uppercase; margin-top:4px; }
+    .val-blue   { color:#00c2ff; }
+    .val-orange { color:#ff9900; }
+    .val-green  { color:#00ff88; }
+    #clock-display { font-family:'DM Mono',monospace; font-size:1.1rem; }
+  </style>
+</head>
+<body>
+
+<div class="display-header">
+  <div>
+    <div class="hospital-name"><i class="fa fa-hospital me-2"></i>SmartHospital QMS</div>
+    <div class="hospital-sub">AI + IoT Queue Management System</div>
+  </div>
+  <div class="text-end">
+    <div class="mb-1"><span class="live-dot"></span> <small style="letter-spacing:.15em">LIVE</small></div>
+    <div id="clock-display">--:--:--</div>
+  </div>
+</div>
+
+<div class="display-body">
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="now-serving-card">
+        <div class="ns-label">🟢 Now Serving</div>
+        <div class="ns-token" id="nsToken">–</div>
+        <div class="ns-name"   id="nsName">Waiting for patient…</div>
+        <div class="ns-doctor" id="nsDoctor"></div>
+        <div class="ns-room"   id="nsRoom"></div>
+      </div>
+
+      <div class="next-card">
+        <div class="next-label">⏭ Up Next</div>
+        <div class="next-token"  id="nextToken">–</div>
+        <div class="next-name"   id="nextName">–</div>
+        <div class="next-doctor" id="nextDoctor">–</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box"><div class="val val-blue"   id="dispTotal">–</div><div class="lbl">Total Today</div></div>
+        <div class="stat-box"><div class="val val-orange" id="dispWaiting">–</div><div class="lbl">Waiting</div></div>
+        <div class="stat-box"><div class="val val-green"  id="dispDone">–</div><div class="lbl">Completed</div></div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="queue-table-card">
+        <div class="queue-table-header">
+          <div style="display:grid;grid-template-columns:80px 1fr 1fr 120px 100px;gap:8px">
+            <span>Token</span><span>Patient</span><span>Doctor</span><span>Priority</span><span>Est. Wait</span>
+          </div>
+        </div>
+        <div id="queueRows">
+          <div class="text-center py-5" style="color:#4a7090">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Clock
+setInterval(() => {
+  document.getElementById('clock-display').textContent =
+    new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}, 1000);
+
+function refreshDisplay() {
+  fetch('/api/active').then(r => r.json()).then(d => {
+    const active = d.active, next = d.next;
+
+    document.getElementById('nsToken').textContent  = active ? '#' + active.token : '–';
+    document.getElementById('nsName').textContent   = active ? active.name : 'No active patient';
+    document.getElementById('nsDoctor').textContent = active ? active.doctor_name : '';
+    document.getElementById('nsRoom').textContent   = active ? active.doctor_room : '';
+
+    document.getElementById('nextToken').textContent  = next ? '#' + next.token : '–';
+    document.getElementById('nextName').textContent   = next ? next.name : 'No patients waiting';
+    document.getElementById('nextDoctor').textContent = next ? next.doctor_name + ' · ' + next.doctor_room : '';
+    document.getElementById('dispWaiting').textContent = d.waiting_count;
+  });
+
+  fetch('/api/stats').then(r => r.json()).then(s => {
+    document.getElementById('dispTotal').textContent = s.total_today;
+    document.getElementById('dispDone').textContent  = s.completed;
+  });
+
+  fetch('/api/queue').then(r => r.json()).then(data => {
+    const visible = data.filter(p => p.status !== 'completed');
+    const el = document.getElementById('queueRows');
+    if (!visible.length) {
+      el.innerHTML = '<div class="text-center py-5" style="color:#4a7090">Queue is empty</div>';
+      return;
+    }
+    el.innerHTML = visible.slice(0, 10).map(p => {
+      const pri  = p.priority === 'HIGH'
+        ? '<span class="badge-high">⚠ HIGH</span>'
+        : '<span class="badge-norm">NORMAL</span>';
+      const wait = p.status === 'active'
+        ? '<span style="color:#00ff88;font-weight:700">SERVING ▶</span>'
+        : p.estimated_wait + ' min';
+      return `<div class="queue-row">
+        <div class="q-token">#${p.token}</div>
+        <div class="q-name">${p.name}</div>
+        <div class="q-doctor">${p.doctor_name}</div>
+        <div>${pri}</div>
+        <div class="q-wait">${wait}</div>
+      </div>`;
+    }).join('');
+  });
+}
+
+refreshDisplay();
+setInterval(refreshDisplay, 3000);
+</script>
+</body>
+</html>
